@@ -1,0 +1,46 @@
+#!/bin/sh -e
+
+if [ -z $1 ]; then
+  echo "usage: odroid-xu3-sd-fuser [DEVICE_PATH]"
+  exit 1
+fi
+
+if [[ $EUID -ne 0 ]]; then
+  echo "This script must be run as root"
+  exit 4
+fi
+
+if [ -b $1 ]; then
+  if [ -b $1boot0 ]; then
+    devname=`echo $1boot0 | awk -F/ '{ print $NF }'`
+    if [ -f /sys/class/block/$devname/force_ro ] && echo 0 > /sys/class/block/$devname/force_ro; then
+      echo "Successfully enabled write access to $1boot0."
+      do_force_ro=1
+    else
+      echo "WARNING: Failed to enable write access to $1boot0. Proceeding anyway..."
+    fi
+    echo "Fusing boot blob to $1boot0..."
+  else
+    echo "$1 has no boot partition!"
+    exit 3
+  fi
+else
+  echo "$1 is not a block device!"
+  exit 2
+fi
+
+RET=0
+dd iflag=dsync oflag=dsync if=@bootblobpath@ of=$1boot0 || RET=$?
+
+if [ "$do_force_ro" == "1" ]; then
+  echo 1 > /sys/class/block/$devname/force_ro
+fi
+
+if [ $RET -ne 0 ]; then
+  echo "Failed!"
+else
+  echo "Success!"
+fi
+
+exit $RET
+

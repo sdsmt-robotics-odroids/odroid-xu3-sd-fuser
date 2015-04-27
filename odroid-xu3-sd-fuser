@@ -1,0 +1,24 @@
+#!/bin/sh -e
+
+if [ -z $1 ]; then
+  echo "usage: odroid-xu3-sd-fuser [DEVICE_PATH]"
+  exit 1
+fi
+
+if [ -b $1 ]; then
+  echo "Fusing boot blob to $1..."
+else
+  echo "$1 is not a block device!"
+  exit 2
+fi
+
+RET=0
+dd iflag=dsync oflag=dsync if=@bootblobpath@ of=$1 seek=1 || RET=$?
+
+if [ $RET -ne 0 ]; then
+  echo "Failed!"
+else
+  echo "Success!"
+fi
+
+exit $RET
